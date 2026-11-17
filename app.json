@@ -1,15 +1,21 @@
 {
   "expo": {
-    "name": "contingencias-mdz",
+    "name": "Alerta Mendoza",
     "slug": "contingencias-mdz",
+    "scheme": "alertamendoza",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.alertamendoza.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.alertamendoza.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -19,7 +25,25 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "output": "server"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Usamos tu ubicación para calcular el riesgo de tormentas, granizo y viento en el lugar donde estás."
+        }
+      ],
+      "expo-font",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "color": "#D7372F"
+        }
+      ]
+    ]
   }
 }
