@@ -36,15 +36,27 @@ if (notificationsSupported) {
   });
 }
 
-async function ensureChannel() {
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+let channelReady: Promise<void> | null = null;
+
+/**
+ * Crea el canal de Android una vez por sesión. En algunas versiones el módulo
+ * nativo crea el canal pero falla al devolver su descripción a JavaScript
+ * (NullPointerException por un campo vacío). Ese error no impide usar el canal,
+ * así que no se deja que corte el aviso.
+ */
+function ensureChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return Promise.resolve();
+  channelReady ??= Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: 'Riesgo climático',
     description: 'Granizo, tormentas, rayos, viento y alertas del SMN en tu ubicación',
     importance: AndroidImportance.HIGH,
     vibrationPattern: [0, 300, 200, 300],
     lightColor: '#D7372F',
-  });
+  }).then(
+    () => undefined,
+    (error) => console.warn('No se pudo confirmar el canal de notificaciones:', error?.message ?? error),
+  );
+  return channelReady;
 }
 
 /** Pide permiso para mostrar notificaciones. Devuelve true si quedó concedido. */
@@ -68,10 +80,16 @@ export async function hasNotificationPermission(): Promise<boolean> {
 
 export async function showNotification(content: NotificationContent): Promise<void> {
   await ensureChannel();
-  await Notifications.scheduleNotificationAsync({
-    content: { title: content.title, body: content.body, sound: true },
-    trigger: Platform.OS === 'android' ? { channelId: CHANNEL_ID } : null,
-  });
+  const request = { content: { title: content.title, body: content.body, sound: true } };
+  try {
+    await Notifications.scheduleNotificationAsync({
+      ...request,
+      trigger: Platform.OS === 'android' ? { channelId: CHANNEL_ID } : null,
+    });
+  } catch {
+    // Si el canal propio no está disponible, se usa el canal por defecto.
+    await Notifications.scheduleNotificationAsync({ ...request, trigger: null });
+  }
 }
 
 /** Una revisión completa: calcula el riesgo y avisa si corresponde. */

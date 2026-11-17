@@ -51,6 +51,13 @@ export function NotifyCard() {
         )}
       </View>
 
+      {notify.error ? (
+        <View style={styles.notice}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={18} color={t.bad} />
+          <Text style={[styles.noticeText, { color: t.text }]}>{notify.error}</Text>
+        </View>
+      ) : null}
+
       {notify.denied ? (
         <Pressable onPress={notify.openSettings} accessibilityRole="button" style={styles.notice}>
           <MaterialCommunityIcons name="bell-off-outline" size={18} color={t.bad} />

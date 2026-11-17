@@ -28,6 +28,8 @@ export type NotifyStatus = {
   /** Estado de la revisión en segundo plano. */
   background: BackgroundState | null;
   busy: boolean;
+  /** Último error al activar o probar los avisos. */
+  error: string | null;
   setEnabled: (enabled: boolean) => Promise<void>;
   setMinLevel: (level: 1 | 2) => Promise<void>;
   sendTest: () => Promise<void>;
@@ -40,6 +42,7 @@ function useNotifySettings(): NotifyStatus {
   const [denied, setDenied] = useState(false);
   const [background, setBackground] = useState<BackgroundState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +71,7 @@ function useNotifySettings(): NotifyStatus {
   const setEnabled = useCallback(
     async (enabled: boolean) => {
       setBusy(true);
+      setError(null);
       try {
         if (enabled) {
           const granted = await requestNotificationPermission();
@@ -76,6 +80,8 @@ function useNotifySettings(): NotifyStatus {
         }
         setBackground(await setBackgroundChecks(enabled));
         await update({ ...settings, enabled });
+      } catch {
+        setError('No se pudieron activar los avisos. Probá de nuevo.');
       } finally {
         setBusy(false);
       }
@@ -89,14 +95,19 @@ function useNotifySettings(): NotifyStatus {
   );
 
   const sendTest = useCallback(async () => {
-    if (!(await requestNotificationPermission())) {
-      setDenied(true);
-      return;
+    setError(null);
+    try {
+      if (!(await requestNotificationPermission())) {
+        setDenied(true);
+        return;
+      }
+      await showNotification({
+        title: 'Precaución: Granizo muy cerca (prueba)',
+        body: 'Así se verá un aviso. Probabilidad 80–90 % a 8 km al sudoeste. Guardá el auto bajo techo.',
+      });
+    } catch {
+      setError('No se pudo mostrar el aviso de prueba.');
     }
-    await showNotification({
-      title: 'Precaución: Granizo muy cerca (prueba)',
-      body: 'Así se verá un aviso. Probabilidad 80–90 % a 8 km al sudoeste. Guardá el auto bajo techo.',
-    });
   }, []);
 
   return {
@@ -106,6 +117,7 @@ function useNotifySettings(): NotifyStatus {
     denied,
     background: isExpoGo && settings.enabled ? 'expo-go' : background,
     busy,
+    error,
     setEnabled,
     setMinLevel,
     sendTest,
