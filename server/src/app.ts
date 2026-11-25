@@ -1,4 +1,5 @@
 import {
+  ROBOTS_TXT,
   bearingDeg,
   DBZ_PALETTE,
   describePlace,
@@ -401,6 +402,7 @@ export function createApp({ sources, cache, forecastBudget, version = '1.0.0', s
   });
   app.get('/docs', swaggerUI({ url: '/openapi.json' }));
   app.get('/', (c) => c.redirect('/docs'));
+  app.get('/robots.txt', (c) => c.text(ROBOTS_TXT));
   app.get('/health', (c) =>
     c.json({ ok: true, version, cache: cache?.stats() ?? {}, openMeteoCalls: forecastBudget?.used() ?? null }),
   );

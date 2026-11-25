@@ -11,6 +11,10 @@ import {
   compassShort,
   DBZ_PALETTE,
   dbzRangeLabel,
+  DCC_CREDIT,
+  GIBS_CREDIT,
+  OSM_CREDIT,
+  SMN_CREDIT,
   describeDbz,
   distanceKm,
   formatTime,
@@ -288,7 +292,7 @@ export default function MapScreen() {
             </View>
           ) : null}
 
-          <Legend layer={layer} showMotion={showMotion && animated && moving.length > 0} />
+          <Legend layer={layer} showMotion={showMotion && animated && moving.length > 0} satellite={showSatellite} />
         </View>
       </View>
     </View>
@@ -337,7 +341,7 @@ function DockButton({ icon, label, onPress, disabled, primary }: { icon: IconNam
   );
 }
 
-function Legend({ layer, showMotion }: { layer: Layer; showMotion: boolean }) {
+function Legend({ layer, showMotion, satellite }: { layer: Layer; showMotion: boolean; satellite: boolean }) {
   const t = useTheme();
   const palette = layer === 'dbz' ? [...DBZ_PALETTE].reverse() : [...HAIL_PALETTE].reverse();
   const labels = layer === 'dbz' ? ['Débil', 'Moderada', 'Fuerte', 'Granizo'] : ['50 %', '70 %', '100 %'];
@@ -362,6 +366,11 @@ function Legend({ layer, showMotion }: { layer: Layer; showMotion: boolean }) {
             ? 'Probabilidad de granizo estimada por el radar.'
             : 'Zonas donde el radar marcó granizo durante el día.'}
         {showMotion ? ' Las flechas muestran hacia dónde se mueve cada tormenta en los próximos 30 min.' : ''}
+      </Text>
+      <Text style={[styles.legendText, { color: t.muted, fontWeight: '600' }]}>{DCC_CREDIT}</Text>
+      <Text style={[styles.credits, { color: t.muted }]}>
+        Alertas: {SMN_CREDIT} · Mapa: {OSM_CREDIT}
+        {satellite ? ` · ${GIBS_CREDIT}` : ''}
       </Text>
     </View>
   );
@@ -427,4 +436,5 @@ const styles = StyleSheet.create({
   legendBar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden' },
   legendLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   legendText: { fontSize: 11, lineHeight: 15 },
+  credits: { fontSize: 9, lineHeight: 12 },
 });

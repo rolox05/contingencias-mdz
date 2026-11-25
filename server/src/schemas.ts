@@ -106,7 +106,17 @@ const SourceStatus = z.object({
   observedAt: isoTime.nullable(),
 });
 
-export const Attribution = z.array(z.object({ name: z.string(), url: z.string(), use: z.string() }));
+export const Attribution = z
+  .array(
+    z.object({
+      name: z.string(),
+      credit: z.string().openapi({ description: 'Texto de crédito que hay que mostrar al usar los datos' }),
+      url: z.string(),
+      license: z.string(),
+      use: z.string(),
+    }),
+  )
+  .openapi('Attribution');
 
 // ---------- /v1/risk ----------
 

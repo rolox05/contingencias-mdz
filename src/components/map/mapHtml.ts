@@ -11,6 +11,7 @@ export const MAP_HTML = `<!DOCTYPE html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css" />
 <style>
   html, body, #map { height: 100%; margin: 0; padding: 0; }
   body { background: #0B1220; font-family: -apple-system, Roboto, 'Segoe UI', sans-serif; }
@@ -32,10 +33,11 @@ export const MAP_HTML = `<!DOCTYPE html>
 <body>
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>
 <script>
 (function () {
   var BOUNDS = [[${RADAR_BOUNDS.south}, ${RADAR_BOUNDS.west}], [${RADAR_BOUNDS.north}, ${RADAR_BOUNDS.east}]];
-  var ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
 
   function send(msg) {
     var text = JSON.stringify(msg);
@@ -48,10 +50,11 @@ export const MAP_HTML = `<!DOCTYPE html>
     return;
   }
 
+  // Los créditos de todas las capas se muestran en el panel de la app (debajo del
+  // mapa), donde no los tapa nada: ver Legend en src/app/(tabs)/mapa.tsx.
   var map = L.map('map', {
-    zoomControl: false, preferCanvas: true, minZoom: 5, maxZoom: 14
+    zoomControl: false, preferCanvas: true, minZoom: 5, maxZoom: 14, attributionControl: false
   }).setView([-33.6, -68.6], 7);
-  map.attributionControl.setPrefix(false);
 
   [['sat', 250], ['radar', 350], ['labels', 380], ['motion', 420]].forEach(function (p) {
     map.createPane(p[0]);
@@ -59,24 +62,28 @@ export const MAP_HTML = `<!DOCTYPE html>
     map.getPane(p[0]).style.pointerEvents = 'none';
   });
 
-  var bases = {
-    light: L.tileLayer(ESRI + 'World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; Esri', maxNativeZoom: 17
-    }),
-    dark: L.layerGroup([
-      L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri', maxNativeZoom: 16
-      }),
-      L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-        pane: 'labels', maxNativeZoom: 16
-      })
-    ])
+  // Mapa base: OpenFreeMap (datos de OpenStreetMap). Gratuito, sin clave ni límite de
+  // uso, con atribución obligatoria (se muestra en el panel de la app).
+  var STYLES = {
+    light: 'https://tiles.openfreemap.org/styles/positron',
+    dark: 'https://tiles.openfreemap.org/styles/dark'
   };
-  var baseShown = null;
+  var base = null;
+  // Se crea con el estilo del tema la primera vez que llega el estado (evita cargar dos estilos).
+  function setBaseStyle(dark) {
+    if (!L.maplibreGL || !window.maplibregl) return;
+    var style = dark ? STYLES.dark : STYLES.light;
+    if (!base) {
+      base = L.maplibreGL({ style: style, attributionControl: false, interactive: false });
+      base.addTo(map);
+    } else if (base.getMaplibreMap()) {
+      base.getMaplibreMap().setStyle(style);
+    }
+  }
 
   var satellite = L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi', {
     layers: 'GOES-East_ABI_Band13_Clean_Infrared', format: 'image/png', transparent: true,
-    opacity: 0.6, pane: 'sat', attribution: 'NASA GIBS / NOAA'
+    opacity: 0.6, pane: 'sat'
   });
 
   var alertLayer = L.layerGroup().addTo(map);
@@ -243,9 +250,7 @@ export const MAP_HTML = `<!DOCTYPE html>
 
   function apply(s) {
     if (changed('dark', s.dark)) {
-      if (baseShown) map.removeLayer(baseShown);
-      baseShown = s.dark ? bases.dark : bases.light;
-      baseShown.addTo(map);
+      setBaseStyle(s.dark);
       document.body.style.background = s.dark ? '#0B1220' : '#DDE3EA';
     }
     if (changed('radar', s.radar)) setRadar(s.radar);

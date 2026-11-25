@@ -4,6 +4,7 @@
  * así que lo usan tanto la app como el servidor.
  */
 export * from './apiFormat';
+export * from './attribution';
 export * from './assess';
 export * from './dcc';
 export * from './decide';

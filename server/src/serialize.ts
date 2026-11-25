@@ -1,4 +1,6 @@
 import {
+  DISCLAIMER,
+  SOURCE_CREDITS,
   alertCovers,
   alertDistanceKm,
   alertLocalities,
@@ -19,27 +21,10 @@ import {
 
 export const LEVEL_NAMES = ['green', 'yellow', 'orange', 'red'] as const;
 
-export const ATTRIBUTION = [
-  {
-    name: 'Dirección de Contingencias Climáticas, Gobierno de Mendoza',
-    url: 'https://www.mendoza.gov.ar/contingencias/radar/',
-    use: 'Radar, rayos (GOES-19/GLM), granizo, pronóstico provincial y estaciones. Uso libre con mención visible de la fuente.',
-  },
-  {
-    name: 'Servicio Meteorológico Nacional (SMN)',
-    url: 'https://www.smn.gob.ar/alertas',
-    use: 'Alertas y avisos a corto plazo (CAP). Licencia Creative Commons Atribución 2.5 Argentina.',
-  },
-  {
-    name: 'Open-Meteo',
-    url: 'https://open-meteo.com',
-    use: 'Pronóstico por hora para un punto. Uso no comercial.',
-  },
-];
+/** Créditos de las fuentes (texto común en core/attribution.ts). */
+export const ATTRIBUTION = SOURCE_CREDITS;
 
-export const DISCLAIMER =
-  'Servicio no oficial. El nivel de riesgo es una estimación automática a partir de datos públicos ' +
-  'y no reemplaza los avisos de las autoridades. Emergencias: 911.';
+export { DISCLAIMER };
 
 export const iso = (ms: number | null | undefined): string | null =>
   ms === null || ms === undefined || !Number.isFinite(ms) ? null : new Date(ms).toISOString();

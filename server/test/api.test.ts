@@ -135,3 +135,19 @@ describe('API ↔ app alert format', () => {
     expect(alertFromApi(body.alerts[0])).toEqual(zonda);
   });
 });
+
+describe('source terms', () => {
+  it('carries the exact DCC credit and source licenses in every data response', async () => {
+    const { DCC_CREDIT } = await import('@alerta/core');
+    for (const path of ['/v1/risk?place=Maipú', '/v1/alerts', '/v1/storms', '/v1/forecast?place=Maipú', '/v1/radar/frames']) {
+      const { body } = await get(path);
+      expect(body.attribution.map((a: any) => a.credit), path).toContain(DCC_CREDIT);
+      expect(body.attribution.find((a: any) => /SMN/.test(a.name)).license).toMatch(/2\.5/);
+    }
+  });
+
+  it('serves a robots.txt that forbids AI training, mirroring the SMN signals', async () => {
+    const res = await createApp({ sources: fakeSources() }).request('/robots.txt');
+    expect(await res.text()).toMatch(/Content-Signal: search=yes, ai-train=no, use=reference/);
+  });
+});

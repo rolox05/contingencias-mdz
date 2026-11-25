@@ -17,27 +17,39 @@ import { NotifyCard } from '@/components/NotifyCard';
 import { Card, LevelPill, SectionTitle } from '@/components/ui';
 import {
   alertCovers,
+  DCC_CREDIT,
+  DISCLAIMER,
   formatDateLabel,
   formatTime,
+  GIBS_CREDIT,
   groupAlerts,
   type HailZone,
+  OPEN_METEO_CREDIT,
+  OSM_CREDIT,
+  SMN_CREDIT,
   utcClockToLocal,
 } from '@alerta/core';
 import { useWeather, type SourceKey } from '@/state/WeatherProvider';
 import { radius, space, useTheme } from '@/theme';
 
 const SOURCES: { key: SourceKey; name: string; detail: string }[] = [
-  { key: 'radar', name: 'Radar meteorológico', detail: 'Contingencias Climáticas, Gobierno de Mendoza' },
-  { key: 'lightning', name: 'Rayos', detail: 'Satélite GOES-19, vía Contingencias Climáticas' },
-  { key: 'smn', name: 'Alertas oficiales', detail: 'Servicio Meteorológico Nacional' },
-  { key: 'dcc', name: 'Pronóstico provincial', detail: 'Contingencias Climáticas' },
-  { key: 'stations', name: 'Estaciones meteorológicas', detail: 'Red agrometeorológica de Mendoza' },
-  { key: 'forecast', name: 'Pronóstico por hora', detail: 'Open-Meteo' },
+  { key: 'radar', name: 'Radar meteorológico', detail: DCC_CREDIT },
+  { key: 'lightning', name: 'Rayos (satélite GOES-19)', detail: DCC_CREDIT },
+  { key: 'smn', name: 'Alertas oficiales', detail: SMN_CREDIT },
+  { key: 'dcc', name: 'Pronóstico provincial', detail: DCC_CREDIT },
+  { key: 'stations', name: 'Estaciones meteorológicas', detail: DCC_CREDIT },
+  { key: 'forecast', name: 'Pronóstico por hora', detail: OPEN_METEO_CREDIT },
 ];
 
+/** Créditos de capas que no tienen estado propio. */
+const OTHER_CREDITS = [OSM_CREDIT, GIBS_CREDIT];
+
 const LINKS = [
-  { label: 'Radar oficial de Contingencias', url: 'https://www.mendoza.gov.ar/contingencias/radar/' },
+  { label: 'Radar oficial de Contingencias Climáticas', url: 'https://www.mendoza.gov.ar/contingencias/radar/' },
   { label: 'Alertas del SMN', url: 'https://www.smn.gob.ar/alertas' },
+  { label: 'Licencia de los datos del SMN (CC BY 2.5 AR)', url: 'https://creativecommons.org/licenses/by/2.5/ar/' },
+  { label: 'Open-Meteo', url: 'https://open-meteo.com' },
+  { label: 'OpenStreetMap', url: 'https://www.openstreetmap.org/copyright' },
 ];
 
 export default function AlertsScreen() {
@@ -229,6 +241,11 @@ export default function AlertsScreen() {
             </View>
           );
         })}
+        {OTHER_CREDITS.map((credit) => (
+          <Text key={credit} style={{ color: t.muted, fontSize: 12, lineHeight: 17 }}>
+            {credit}
+          </Text>
+        ))}
         {LINKS.map((l) => (
           <Pressable
             key={l.url}
@@ -246,7 +263,7 @@ export default function AlertsScreen() {
       </Card>
 
       <Text style={[styles.footer, { color: t.muted }]}>
-        App no oficial, hecha con datos públicos. Ante una emergencia llamá al 911.
+        {DISCLAIMER}
       </Text>
     </ScrollView>
   );

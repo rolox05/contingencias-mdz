@@ -3,7 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Request, Response } from 'express';
 
 import { createApiClient } from './api';
-import { createMcpServer, VERSION } from './server';
+import { createMcpServer, ROBOTS_TXT, VERSION } from './server';
 
 /**
  * Servidor MCP remoto (Streamable HTTP, sin sesiones) en su propio puerto.
@@ -44,6 +44,10 @@ const notAllowed = (_req: Request, res: Response) => {
 };
 app.get('/mcp', notAllowed);
 app.delete('/mcp', notAllowed);
+
+app.get('/robots.txt', (_req: Request, res: Response) => {
+  res.type('text/plain').send(ROBOTS_TXT);
+});
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ ok: true, version: VERSION });

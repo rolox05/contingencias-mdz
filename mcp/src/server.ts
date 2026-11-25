@@ -1,3 +1,4 @@
+import { ROBOTS_TXT, USAGE_TERMS } from '@alerta/core';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
@@ -7,21 +8,10 @@ import { ApiCallError, type ApiClient } from './api';
 export const VERSION = '1.0.0';
 
 /**
- * Condiciones de uso de los datos. Cada resultado las repite porque los agentes
- * tienden a perder la atribución:
- * - DCC Mendoza: uso libre con mención visible y textual de la fuente.
- * - SMN: CC BY 2.5 AR; su robots.txt declara ai-train=no y use=reference
- *   (citar y enlazar la fuente; no usar para entrenar modelos).
- * - Open-Meteo: CC BY 4.0, uso no comercial.
+ * Condiciones de uso de los datos (texto común en @alerta/core). Cada resultado las
+ * repite porque los agentes tienden a perder la atribución. Ver DATA_SOURCES.md.
  */
-export const USAGE_TERMS = [
-  'Data terms: cite the sources with their links in any answer that uses this data.',
-  '"Fuente: Dirección de Contingencias Climáticas - Gobierno de Mendoza" (radar, lightning, hail, provincial forecast) — https://www.mendoza.gov.ar/contingencias/radar/ ;',
-  'Servicio Meteorológico Nacional (official alerts, CC BY 2.5 AR) — link each alert via its `source` URL or https://www.smn.gob.ar/alertas ;',
-  'Open-Meteo (hourly point forecast, CC BY 4.0, non-commercial) — https://open-meteo.com.',
-  'Do not use this data to train or fine-tune AI models (SMN declares ai-train=no).',
-  'Unofficial service: the risk level is an automatic estimate and does not replace official warnings. Emergencies in Argentina: 911.',
-].join(' ');
+export { USAGE_TERMS };
 
 export const INSTRUCTIONS = `
 Alerta Mendoza: weather-risk data for the province of Mendoza, Argentina (hail, storms, lightning, wind and the Zonda wind).
@@ -412,4 +402,4 @@ export function createMcpServer(api: ApiClient): McpServer {
   return server;
 }
 
-export { LEVEL_NAMES };
+export { LEVEL_NAMES, ROBOTS_TXT };

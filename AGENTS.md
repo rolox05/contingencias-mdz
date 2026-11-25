@@ -57,6 +57,10 @@ Weather-risk app for Mendoza (Argentina): hail, storms, lightning, wind/Zonda. U
 npm run check   # typecheck all workspaces + expo lint + vitest
 ```
 
+### Data terms
+
+Every source has conditions (credit text, licenses, no AI training for SMN data, Open-Meteo non-commercial and call limits). Read `DATA_SOURCES.md` before adding a source, a new consumer, or any monetization. Credit strings live in `packages/core/src/attribution.ts` — reuse them, don't retype them.
+
 ### Fragile upstream sources (read before touching `packages/core/src`)
 
 - **SMN CAP feed** (`smn.ts`): rate-limits with HTTP 429 when many files are fetched; times are labelled `-03:00` but are actually UTC; each alert is published twice in different batches. Tests in `packages/core/test/smn.test.ts` pin all three behaviours.

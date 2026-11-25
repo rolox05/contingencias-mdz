@@ -2,7 +2,7 @@ import { createHmac, randomUUID } from 'node:crypto';
 import { lookup as dnsLookup, type LookupAddress } from 'node:dns';
 import type { LookupFunction } from 'node:net';
 
-import { assessPlace, escalate, type Assessment, type SmnAlert } from '@alerta/core';
+import { assessPlace, escalate, USAGE_TERMS, type Assessment, type SmnAlert } from '@alerta/core';
 import { Agent, fetch as undiciFetch } from 'undici';
 
 import { alertOut, ATTRIBUTION, DISCLAIMER, iso, riskOut } from '../serialize';
@@ -11,10 +11,7 @@ import { isPrivateAddress } from './safety';
 import type { DeliveryRecord, Subscription, SubscriptionStore } from './store';
 
 /** Condiciones de uso que viajan en cada webhook (mismas que en el servidor MCP). */
-export const WEBHOOK_USAGE_TERMS =
-  'Citar las fuentes con su enlace: "Fuente: Dirección de Contingencias Climáticas - Gobierno de Mendoza"; ' +
-  'Servicio Meteorológico Nacional (CC BY 2.5 AR, enlazar cada alerta con su campo source); Open-Meteo (CC BY 4.0, uso no comercial). ' +
-  'No usar estos datos para entrenar modelos de IA (el SMN declara ai-train=no).';
+export const WEBHOOK_USAGE_TERMS = USAGE_TERMS;
 
 export type WebhookEventType = 'risk.raised' | 'risk.cleared' | 'alert.new' | 'subscription.test';
 

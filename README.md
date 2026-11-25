@@ -52,6 +52,8 @@ notificaciones push; la lógica de decisión (`src/notify/decide.ts`) se puede r
 
 ## Fuentes de datos
 
+Condiciones de uso de cada fuente y cómo se cumplen: [DATA_SOURCES.md](DATA_SOURCES.md).
+
 | Dato | Fuente |
 | --- | --- |
 | Radar (reflectividad, probabilidad de granizo, acumulado diario) y zonas afectadas | [DCC Mendoza](https://www.mendoza.gov.ar/contingencias/radar/), una pasada cada ~2 min |
@@ -60,7 +62,7 @@ notificaciones push; la lógica de decisión (`src/notify/decide.ts`) se puede r
 | Pronóstico provincial y estaciones meteorológicas | DCC Mendoza (agrometeo.mendoza.gov.ar) |
 | Pronóstico por hora para tu punto (lluvia, ráfagas, humedad) | [Open-Meteo](https://open-meteo.com) |
 | Imagen satelital infrarroja | NASA GIBS (GOES-East) |
-| Mapa base | Esri |
+| Mapa base | OpenFreeMap (datos de OpenStreetMap) |
 
 ## Cómo se calcula el riesgo
 
@@ -194,7 +196,5 @@ copiá `.env.example` como `.env.local` y completá `EXPO_PUBLIC_API_URL`.
   usuarios conviene un servidor intermedio que descargue las alertas una sola vez.
 - **Horarios del SMN**: el feed rotula sus horas como hora argentina pero están en UTC; la
   app lo corrige (ver `src/data/smn.ts`).
-- **Mapa base**: los mosaicos de Esri son aptos para pruebas; para publicar conviene
-  registrar una clave propia de un proveedor de mapas.
 - **Versión web**: necesita el proxy incluido porque los servidores oficiales no permiten
   consultas directas desde el navegador. Es para desarrollo, no un producto aparte.

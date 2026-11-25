@@ -17,7 +17,9 @@ import { PlaceButton } from '@/components/PlacePicker';
 import { Card, LevelPill, SectionTitle } from '@/components/ui';
 import {
   compassShort,
+  DCC_CREDIT,
   describeCode,
+  DISCLAIMER,
   formatAgo,
   formatKm,
   formatTime,
@@ -26,6 +28,8 @@ import {
   type HazardKey,
   type Level,
   LEVELS,
+  OPEN_METEO_CREDIT,
+  SMN_CREDIT,
 } from '@alerta/core';
 import { useNotify } from '@/notify/NotifyProvider';
 import { loadBannerDismissed, saveBannerDismissed } from '@/notify/store';
@@ -242,7 +246,7 @@ export default function RiskScreen() {
               <Text style={[styles.source, { color: t.muted }]}>
                 Estación {w.station.station.name} (a {formatKm(w.station.km)}),{' '}
                 {formatAgo(w.station.station.time)}
-                {w.station.station.rainMm ? ` · lluvia ${w.station.station.rainMm} mm` : ''}
+                {w.station.station.rainMm ? ` · lluvia ${w.station.station.rainMm} mm` : ''}. {DCC_CREDIT}.
               </Text>
             ) : null}
           </Card>
@@ -271,7 +275,7 @@ export default function RiskScreen() {
             ))}
           </ScrollView>
           <Text style={[styles.source, { color: t.muted }]}>
-            Probabilidad de lluvia y ráfagas máximas por hora.
+            Probabilidad de lluvia y ráfagas máximas por hora. {OPEN_METEO_CREDIT}.
           </Text>
         </>
       ) : null}
@@ -295,8 +299,9 @@ export default function RiskScreen() {
       ) : null}
 
       <Text style={[styles.footer, { color: t.muted }]}>
-        App no oficial. El nivel de riesgo es una estimación automática a partir de datos públicos
-        y no reemplaza los avisos de las autoridades. Emergencias: 911.
+        {DCC_CREDIT} (radar, rayos, estaciones y pronóstico provincial). Alertas: {SMN_CREDIT}.
+        Pronóstico por hora: {OPEN_METEO_CREDIT}.{'\n\n'}
+        {DISCLAIMER}
       </Text>
     </ScrollView>
   );
