@@ -55,10 +55,14 @@ Clientes que lanzan el proceso (stdio), por ejemplo en la configuración de Clau
 | `get_forecast` | Pronóstico provincial de la DCC y por hora para el punto |
 | `get_hail_today` | Zonas con granizo detectado hoy |
 | `list_places` | Localidades aceptadas por el argumento `place` |
+| `create_alert_subscription` | Suscribe un webhook a un lugar (devuelve id y secreto) |
+| `get_alert_subscription` | Estado y último envío de una suscripción |
+| `test_alert_subscription` | Envía un evento de prueba al webhook |
+| `delete_alert_subscription` | Borra una suscripción |
 
 Recursos: `alerta://usage` (cómo leer los datos y condiciones de uso) y `alerta://alerts/active`.
 
-Todas las herramientas son de solo lectura. Cada resultado trae un resumen en inglés, los datos
+Las herramientas de consulta son de solo lectura; las de suscripciones crean o borran datos y lo declaran en sus anotaciones. Los webhooks se describen en [server/README.md](../server/README.md#suscripciones-y-webhooks). Cada resultado trae un resumen en inglés, los datos
 completos en `structuredContent` y las condiciones de uso de las fuentes.
 
 ## Condiciones de uso que el servidor transmite a los agentes

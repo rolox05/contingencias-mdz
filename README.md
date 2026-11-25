@@ -172,6 +172,9 @@ pronóstico en JSON estructurado. Detalles y endpoints en [server/README.md](ser
 npm run dev -w @alerta/server     # http://localhost:8787 (documentación en /docs)
 ```
 
+La API también ofrece **suscripciones con webhooks**: avisa por `POST` firmado cuando el riesgo
+sube o baja en un lugar, o cuando aparece una alerta del SMN que lo cubre.
+
 Sobre la API corre un **servidor MCP** (puerto 8788) para que asistentes de IA consulten
 riesgo, alertas, tormentas y rayos: ver [mcp/README.md](mcp/README.md).
 

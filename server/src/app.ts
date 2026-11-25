@@ -42,15 +42,16 @@ import {
   type ResolvedLocation,
 } from './serialize';
 import type { ServerSources } from './sources';
+import { registerSubscriptionRoutes, type SubscriptionOptions } from './subscriptions/routes';
 
 /** Zona donde los datos tienen sentido: Mendoza y alrededores. */
 const SERVICE_AREA = { south: -39, north: -30, west: -72, east: -64.5 };
 
 type ErrorCode = z.infer<typeof ErrorSchema>['error']['code'];
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
-    public status: 400 | 404 | 422 | 502,
+    public status: 400 | 401 | 404 | 422 | 429 | 502,
     public code: ErrorCode,
     message: string,
   ) {
@@ -66,7 +67,7 @@ const normalize = (s: string) =>
     .trim();
 
 /** Ubicación a partir de lat/lng o del nombre de una localidad. */
-function resolveLocation(q: { lat?: number; lng?: number; place?: string }): ResolvedLocation {
+export function resolveLocation(q: { lat?: number; lng?: number; place?: string }): ResolvedLocation {
   if (q.place) {
     const locality = LOCALITIES.find((l) => normalize(l.name) === normalize(q.place!));
     if (!locality) throw new ApiError(404, 'UNKNOWN_PLACE', `Localidad desconocida: ${q.place}. Ver /v1/places.`);
@@ -93,9 +94,17 @@ const json = <T extends z.ZodType>(schema: T, description: string) => ({
   200: { content: { 'application/json': { schema } }, description },
 });
 
-export type AppOptions = { sources: ServerSources; cache?: TtlCache; version?: string };
+export type AppOptions = {
+  sources: ServerSources;
+  cache?: TtlCache;
+  /** Para informar en /health cuánto se usó del tope de Open-Meteo. */
+  forecastBudget?: { used(): Record<string, number> };
+  version?: string;
+  /** Si se indica, se habilitan las suscripciones con webhooks. */
+  subscriptions?: SubscriptionOptions;
+};
 
-export function createApp({ sources, cache, version = '1.0.0' }: AppOptions) {
+export function createApp({ sources, cache, forecastBudget, version = '1.0.0', subscriptions }: AppOptions) {
   const app = new OpenAPIHono({
     defaultHook: (result, c) => {
       if (!result.success) {
@@ -375,6 +384,9 @@ export function createApp({ sources, cache, version = '1.0.0' }: AppOptions) {
     (c) => c.json({ places: LOCALITIES.map((l) => ({ name: l.name, lat: l.lat, lng: l.lng })) }, 200),
   );
 
+  // ---------- Suscripciones y webhooks ----------
+  if (subscriptions) registerSubscriptionRoutes(app, subscriptions, { ApiError, resolveLocation });
+
   // ---------- Documentación y estado ----------
   app.doc31('/openapi.json', {
     openapi: '3.1.0',
@@ -389,7 +401,9 @@ export function createApp({ sources, cache, version = '1.0.0' }: AppOptions) {
   });
   app.get('/docs', swaggerUI({ url: '/openapi.json' }));
   app.get('/', (c) => c.redirect('/docs'));
-  app.get('/health', (c) => c.json({ ok: true, version, cache: cache?.stats() ?? {} }));
+  app.get('/health', (c) =>
+    c.json({ ok: true, version, cache: cache?.stats() ?? {}, openMeteoCalls: forecastBudget?.used() ?? null }),
+  );
 
   return app;
 }

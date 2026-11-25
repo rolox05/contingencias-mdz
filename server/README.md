@@ -26,6 +26,10 @@ npm start -w @alerta/server            # corre el build
 | `GET /v1/radar/frames` | Imágenes del radar de los últimos ~45 min, con límites, proyección y paletas |
 | `GET /v1/hail/today` | Zonas con granizo detectado hoy (reporte experimental de la DCC) |
 | `GET /v1/places` | Localidades válidas para `place` |
+| `GET /v1/location?lat=&lng=` o `?place=` | Valida una ubicación y devuelve su nombre |
+| `POST /v1/subscriptions` | Crea una suscripción con webhook (ver abajo) |
+| `GET / PATCH / DELETE /v1/subscriptions/{id}` | Ver, modificar o reactivar, y borrar (con `Authorization: Bearer <secret>`) |
+| `POST /v1/subscriptions/{id}/test` | Envía un evento de prueba al webhook |
 
 ## Convenciones
 
@@ -52,3 +56,48 @@ npm start -w @alerta/server            # corre el build
 Si una fuente falla se sigue sirviendo el último dato bueno por un tiempo. Radar, rayos y
 alertas se mantienen precargados (cada 60 s) para que las respuestas no esperen a las fuentes.
 La caché es en memoria: con varias instancias, cada una tiene la suya.
+
+## Suscripciones y webhooks
+
+```bash
+curl -X POST http://localhost:8787/v1/subscriptions -H 'Content-Type: application/json' \
+  -d '{"place":"Godoy Cruz","webhookUrl":"https://example.com/hooks/alerta","minLevel":2,"events":["risk","alerts"]}'
+```
+
+La respuesta trae `id` y `secret` (se muestra **una sola vez**). Cada ~2 minutos el servidor
+evalúa el lugar con las mismas reglas que los avisos del teléfono y envía un `POST` JSON cuando:
+
+| Evento | Cuándo |
+|---|---|
+| `risk.raised` | El riesgo alcanza `minLevel` y es mayor que el último informado |
+| `risk.cleared` | Vuelve a bajar por debajo de `minLevel` después de haberse informado |
+| `alert.new` | Aparece una alerta del SMN que cubre el lugar (una sola vez por alerta) |
+| `subscription.test` | Lo pediste con `/test` |
+
+Cada envío incluye la evaluación completa (`risk`, mismo formato que `/v1/risk`), las alertas
+nuevas, `attribution`, `usageTerms` y `disclaimer`. Cabeceras: `X-Alerta-Event`,
+`X-Alerta-Delivery` (id único) y `X-Alerta-Signature: t=<unix>,v1=<hex>`, donde
+`v1 = HMAC-SHA256(secret, "<t>.<cuerpo>")`. Verificá la firma y rechazá `t` viejos.
+
+Para verificar en Node:
+
+```js
+const [t, v1] = req.headers['x-alerta-signature'].split(',').map((p) => p.split('=')[1]);
+const ok = crypto.createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex') === v1;
+```
+
+- Reintentos: 3 intentos (ahora, a los 10 s y al minuto) ante errores 5xx, 408, 429 o de red.
+  Tras 10 envíos fallidos seguidos la suscripción se desactiva; se reactiva con
+  `PATCH {"status":"active"}`.
+- Seguridad: solo URLs `https` públicas. Se rechazan direcciones privadas, de loopback y de
+  metadatos de la nube, tanto al crear como al conectar (protección contra SSRF y DNS
+  rebinding). `WEBHOOKS_ALLOW_PRIVATE=true` lo desactiva: solo para desarrollo.
+- Límites: `MAX_SUBSCRIPTIONS` (1000) en total y 20 altas por hora por dirección IP.
+- Datos: se guardan en `DATA_DIR/subscriptions.json` (`DATA_DIR=data` por defecto, permisos 600).
+  Con más de una instancia hace falta una base compartida.
+- Open-Meteo: cada lugar distinto consulta el pronóstico. Hay un tope (8.000 por día,
+  4.000 por hora, 500 por minuto) por debajo del límite del plan gratuito; si se alcanza, el
+  riesgo se calcula sin el pronóstico. El uso actual se ve en `/health`.
+
+Variables: `PORT` (8787), `DATA_DIR`, `MAX_SUBSCRIPTIONS`, `WEBHOOK_INTERVAL_MS` (120000),
+`WEBHOOKS_ALLOW_PRIVATE`.

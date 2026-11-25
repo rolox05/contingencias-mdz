@@ -18,16 +18,19 @@ export class ApiCallError extends Error {
 
 export type Query = Record<string, string | number | boolean | undefined>;
 
+export type RequestOptions = { query?: Query; body?: unknown; headers?: Record<string, string> };
+
 export type ApiClient = {
   get<T = unknown>(path: string, query?: Query): Promise<T>;
   post<T = unknown>(path: string, body: unknown): Promise<T>;
-  delete<T = unknown>(path: string): Promise<T>;
+  request<T = unknown>(method: string, path: string, opts?: RequestOptions): Promise<T>;
 };
 
 export function createApiClient(baseUrl: string, fetchImpl: typeof fetch = fetch, timeoutMs = 25_000): ApiClient {
   const base = baseUrl.replace(/\/+$/, '');
 
-  async function request<T>(method: string, path: string, query?: Query, body?: unknown): Promise<T> {
+  async function request<T>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
+    const { query, body } = opts;
     const url = new URL(base + path);
     for (const [key, value] of Object.entries(query ?? {})) {
       if (value !== undefined) url.searchParams.set(key, String(value));
@@ -39,7 +42,7 @@ export function createApiClient(baseUrl: string, fetchImpl: typeof fetch = fetch
       res = await fetchImpl(url, {
         method,
         signal: controller.signal,
-        headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+        headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...opts.headers },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch {
@@ -47,6 +50,7 @@ export function createApiClient(baseUrl: string, fetchImpl: typeof fetch = fetch
     } finally {
       clearTimeout(timer);
     }
+    if (res.status === 204) return undefined as T;
     const data = (await res.json().catch(() => null)) as { error?: { code: string; message: string } } | null;
     if (!res.ok) {
       throw new ApiCallError(data?.error?.code ?? 'API_ERROR', data?.error?.message ?? `HTTP ${res.status}`, res.status);
@@ -55,8 +59,8 @@ export function createApiClient(baseUrl: string, fetchImpl: typeof fetch = fetch
   }
 
   return {
-    get: (path, query) => request('GET', path, query),
-    post: (path, body) => request('POST', path, undefined, body),
-    delete: (path) => request('DELETE', path),
+    get: (path, query) => request('GET', path, { query }),
+    post: (path, body) => request('POST', path, { body }),
+    request,
   };
 }

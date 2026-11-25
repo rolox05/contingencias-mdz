@@ -56,3 +56,27 @@ describe('decide (notification rules)', () => {
     expect(out.notifications[0].body).toBe('A 14 km de Tunuyán: Celda a 20 km. Guardá el auto bajo techo ahora.');
   });
 });
+
+describe('escalate (shared by phone notifications and webhooks)', () => {
+  it('reports raised, cleared and new alerts as structured flags', async () => {
+    const { escalate } = await import('../src');
+    const now = Date.UTC(2026, 10, 25, 18, 0);
+    const empty = { level: 0 as const, levelAt: 0, alertIds: [] };
+
+    const up = escalate({ risk: risk(2), myAlerts: [alert('a', now)], minLevel: 2, memory: empty, now });
+    expect(up.raised).toBe(true);
+    expect(up.cleared).toBe(false);
+    expect(up.newAlerts.map((a) => a.id)).toEqual(['a']);
+
+    const same = escalate({ risk: risk(2), myAlerts: [alert('a', now)], minLevel: 2, memory: up.memory, now: now + 60_000 });
+    expect(same.raised || same.cleared || same.newAlerts.length > 0).toBe(false);
+
+    const down = escalate({ risk: risk(0), myAlerts: [], minLevel: 2, memory: same.memory, now: now + 120_000 });
+    expect(down.cleared).toBe(true);
+    expect(down.memory.level).toBe(0);
+    expect(down.memory.alertIds).toEqual([]); // la alerta venció y se olvida
+
+    const stillLow = escalate({ risk: risk(1), myAlerts: [], minLevel: 2, memory: down.memory, now: now + 180_000 });
+    expect(stillLow.cleared).toBe(false);
+  });
+});

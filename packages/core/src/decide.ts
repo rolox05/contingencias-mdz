@@ -36,12 +36,58 @@ function alertWhen(a: SmnAlert, now: number): string {
     : `desde ${formatDayTime(a.onset, now)}`;
 }
 
+export type Escalation = {
+  /** Alertas del SMN que cubren el lugar y todavía no se informaron. */
+  newAlerts: SmnAlert[];
+  /** El riesgo alcanzó el nivel elegido y es mayor que el último informado. */
+  raised: boolean;
+  /** El riesgo bajó por debajo del nivel elegido después de haberse informado. */
+  cleared: boolean;
+  memory: NotifyMemory;
+};
+
 /**
- * Decide qué avisar a partir del riesgo actual y de lo ya informado.
- * - Alertas nuevas del SMN que cubren tu ubicación: se avisan siempre.
- * - Riesgo calculado: se avisa cuando alcanza el nivel elegido y es mayor que el
- *   último informado. Si baja, la memoria baja con él, así una nueva suba vuelve a avisar.
+ * Reglas de escalamiento, compartidas por los avisos del teléfono y los webhooks:
+ * - Alertas nuevas del SMN que cubren el lugar: se informan siempre, una sola vez.
+ * - Riesgo calculado: se informa cuando alcanza el nivel elegido y es mayor que el
+ *   último informado. Si baja, la memoria baja con él, así una nueva suba vuelve a
+ *   informarse. Pasadas 3 horas, un nivel ya informado se puede volver a informar.
  */
+export function escalate(input: {
+  risk: Risk;
+  myAlerts: SmnAlert[];
+  minLevel: Level;
+  memory: NotifyMemory;
+  now: number;
+}): Escalation {
+  const { risk, myAlerts, minLevel, now } = input;
+
+  // Las alertas que ya vencieron se olvidan para que la memoria no crezca.
+  const liveIds = new Set(myAlerts.map((a) => a.id));
+  const known = input.memory.alertIds.filter((id) => liveIds.has(id));
+  const newAlerts = myAlerts.filter((a) => !known.includes(a.id));
+
+  let { level: lastLevel, levelAt } = input.memory;
+  if (now - levelAt > LEVEL_MEMORY_MS) lastLevel = 0;
+
+  const level = risk.level;
+  const raised = level >= minLevel && level > lastLevel;
+  const cleared = lastLevel >= minLevel && level < minLevel;
+  const changed = raised || level < lastLevel;
+
+  return {
+    newAlerts,
+    raised,
+    cleared,
+    memory: {
+      level: changed ? level : lastLevel,
+      levelAt: changed ? now : levelAt,
+      alertIds: [...known, ...newAlerts.map((a) => a.id)],
+    },
+  };
+}
+
+/** Avisos del teléfono: arma los textos a partir de las reglas de `escalate`. */
 export function decide(input: {
   risk: Risk;
   myAlerts: SmnAlert[];
@@ -50,13 +96,10 @@ export function decide(input: {
   memory: NotifyMemory;
   now: number;
 }): { notifications: NotificationContent[]; memory: NotifyMemory } {
-  const { risk, myAlerts, placeLabel, settings, now } = input;
+  const { risk, placeLabel, now } = input;
+  const result = escalate({ ...input, minLevel: input.settings.minLevel });
   const notifications: NotificationContent[] = [];
-
-  // Las alertas que ya vencieron se olvidan para que la memoria no crezca.
-  const liveIds = new Set(myAlerts.map((a) => a.id));
-  const known = input.memory.alertIds.filter((id) => liveIds.has(id));
-  const fresh = myAlerts.filter((a) => !known.includes(a.id));
+  const fresh = result.newAlerts;
 
   if (fresh.length === 1) {
     const a = fresh[0];
@@ -72,28 +115,14 @@ export function decide(input: {
     });
   }
 
-  let { level: lastLevel, levelAt } = input.memory;
-  if (now - levelAt > LEVEL_MEMORY_MS) lastLevel = 0;
-
-  const level = risk.level;
-  let memoryLevel: Level = lastLevel;
-  let memoryAt = levelAt;
-  if (level >= settings.minLevel && level > lastLevel) {
+  if (result.raised) {
     notifications.push({
-      title: `${LEVELS[level].name}: ${risk.headline}`,
+      title: `${LEVELS[risk.level].name}: ${risk.headline}`,
       body: `${cap(placeLabel)}: ${risk.detail}.${risk.advice[0] ? ` ${risk.advice[0]}` : ''}`,
     });
-    memoryLevel = level;
-    memoryAt = now;
-  } else if (level < lastLevel) {
-    memoryLevel = level;
-    memoryAt = now;
   }
 
-  return {
-    notifications,
-    memory: { level: memoryLevel, levelAt: memoryAt, alertIds: [...known, ...fresh.map((a) => a.id)] },
-  };
+  return { notifications, memory: result.memory };
 }
 
 /**

@@ -296,6 +296,89 @@ export function createMcpServer(api: ApiClient): McpServer {
     }),
   );
 
+  // ---------- Suscripciones con webhooks ----------
+  const subscriptionPath = (id: string) => `/v1/subscriptions/${encodeURIComponent(id)}`;
+  const authed = (secret: string) => ({ Authorization: `Bearer ${secret}` });
+
+  server.registerTool(
+    'create_alert_subscription',
+    {
+      title: 'Subscribe a webhook to weather risk at a location',
+      description:
+        'Creates a subscription: the service checks the location every ~2 minutes and POSTs a signed JSON event to ' +
+        'webhook_url when the risk reaches min_level (risk.raised), when it drops back below it (risk.cleared), or ' +
+        'when a new SMN alert covers the location (alert.new). The webhook must be a public https URL. ' +
+        'Returns an id and a secret, shown only once: the secret verifies the X-Alerta-Signature header ' +
+        '(t=<unix>,v1=hex(HMAC-SHA256(secret, "<t>.<body>"))) and is required to manage the subscription. ' +
+        'Only create subscriptions the user asked for, and give them the secret.',
+      inputSchema: {
+        ...locationInput,
+        webhook_url: z.string().describe('Public https URL that will receive the events'),
+        min_level: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional().describe('1 yellow, 2 orange (default), 3 red'),
+        events: z.array(z.enum(['risk', 'alerts'])).min(1).optional().describe('Default both'),
+        label: z.string().max(80).optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
+    safe(async (args: LocationArgs & { webhook_url: string; min_level?: 1 | 2 | 3; events?: ('risk' | 'alerts')[]; label?: string }) => {
+      const sub = await api.post<any>('/v1/subscriptions', {
+        ...located(args),
+        webhookUrl: args.webhook_url,
+        minLevel: args.min_level,
+        events: args.events,
+        label: args.label,
+      });
+      return result(
+        `Subscription ${sub.id} created for ${sub.location.label} (level ≥ ${sub.minLevel}, events: ${sub.events.join(', ')}). ` +
+          `Secret (shown only once, give it to the user): ${sub.secret}`,
+        sub,
+      );
+    }),
+  );
+
+  server.registerTool(
+    'get_alert_subscription',
+    {
+      title: 'Check a webhook subscription',
+      description: 'Status of a subscription and its last delivery. Requires the id and secret returned at creation.',
+      inputSchema: { id: z.string(), secret: z.string() },
+      annotations: READ_ONLY,
+    },
+    safe(async (args: { id: string; secret: string }) => {
+      const sub = await api.request<any>('GET', subscriptionPath(args.id), { headers: authed(args.secret) });
+      const last = sub.lastDelivery ? `last delivery ${sub.lastDelivery.type} at ${sub.lastDelivery.at}: ${sub.lastDelivery.ok ? 'ok' : `failed (${sub.lastDelivery.status ?? sub.lastDelivery.error})`}` : 'no deliveries yet';
+      return result(`Subscription ${sub.id} for ${sub.location.label} is ${sub.status}${sub.disabledReason ? ` (${sub.disabledReason})` : ''}; ${last}.`, sub);
+    }),
+  );
+
+  server.registerTool(
+    'test_alert_subscription',
+    {
+      title: 'Send a test event to a webhook',
+      description: 'Sends a subscription.test event to the webhook once and reports the HTTP status it answered.',
+      inputSchema: { id: z.string(), secret: z.string() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
+    safe(async (args: { id: string; secret: string }) => {
+      const r = await api.request<any>('POST', `${subscriptionPath(args.id)}/test`, { headers: authed(args.secret), body: {} });
+      return result(r.ok ? `Test event delivered (HTTP ${r.status}).` : `Test event failed: ${r.status ?? r.error}.`, r);
+    }),
+  );
+
+  server.registerTool(
+    'delete_alert_subscription',
+    {
+      title: 'Delete a webhook subscription',
+      description: 'Deletes a subscription. Requires the id and secret.',
+      inputSchema: { id: z.string(), secret: z.string() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    safe(async (args: { id: string; secret: string }) => {
+      await api.request('DELETE', subscriptionPath(args.id), { headers: authed(args.secret) });
+      return { content: [{ type: 'text', text: `Subscription ${args.id} deleted.` }] };
+    }),
+  );
+
   server.registerResource(
     'usage',
     'alerta://usage',

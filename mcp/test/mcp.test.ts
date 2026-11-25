@@ -4,13 +4,28 @@ import { describe, expect, it } from 'vitest';
 
 import { createApp } from '../../server/src/app';
 import type { ServerSources } from '../../server/src/sources';
+import { MemoryStore } from '../../server/src/subscriptions/store';
 import { fakeSources } from '../../server/test/fixtures';
 import { createApiClient } from '../src/api';
 import { createMcpServer, INSTRUCTIONS } from '../src/server';
 
 /** Cliente MCP conectado en memoria al servidor MCP, que habla con la API real (fuentes falsas). */
+const delivered: any[] = [];
+
 async function connect(sources: ServerSources = fakeSources()) {
-  const app = createApp({ sources });
+  const app = createApp({
+    sources,
+    subscriptions: {
+      store: new MemoryStore(),
+      policy: { allowPrivate: false, resolve: async () => ['93.184.216.34'] },
+      delivery: {
+        send: async (_url, init) => {
+          delivered.push(JSON.parse(init.body));
+          return { status: 204 };
+        },
+      },
+    },
+  });
   const api = createApiClient('http://api.test', ((input: string | URL | Request, init?: RequestInit) =>
     app.request(String(input), init)) as typeof fetch);
   const server = createMcpServer(api);
@@ -28,9 +43,12 @@ describe('MCP server', () => {
     const client = await connect();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
-      'get_alerts', 'get_forecast', 'get_hail_today', 'get_lightning', 'get_risk', 'get_storms', 'list_places',
+      'create_alert_subscription', 'delete_alert_subscription', 'get_alert_subscription', 'get_alerts', 'get_forecast',
+      'get_hail_today', 'get_lightning', 'get_risk', 'get_storms', 'list_places', 'test_alert_subscription',
     ]);
-    expect(tools.every((t) => t.annotations?.readOnlyHint)).toBe(true);
+    const readOnly = tools.filter((t) => t.annotations?.readOnlyHint).map((t) => t.name);
+    expect(readOnly).not.toContain('create_alert_subscription');
+    expect(tools.find((t) => t.name === 'delete_alert_subscription')?.annotations?.destructiveHint).toBe(true);
     expect(client.getInstructions()).toBe(INSTRUCTIONS);
     expect(INSTRUCTIONS).toMatch(/ai-train=no/);
 
@@ -95,5 +113,43 @@ describe('MCP server', () => {
     expect(body.alerts[0].event).toBe('Viento Zonda');
     expect(body.alerts[0].geometry).toBeUndefined();
     expect(body.usageTerms).toMatch(/ai-train=no/);
+  });
+});
+
+describe('subscription tools', () => {
+  it('creates, checks, tests and deletes a webhook subscription', async () => {
+    const client = await connect();
+    const created: any = await client.callTool({
+      name: 'create_alert_subscription',
+      arguments: { place: 'Maipú', webhook_url: 'https://example.com/hook', min_level: 2 },
+    });
+    expect(created.isError).toBeFalsy();
+    const { id, secret } = created.structuredContent;
+    expect(text(created)).toMatch(/Secret \(shown only once/);
+
+    const status: any = await client.callTool({ name: 'get_alert_subscription', arguments: { id, secret } });
+    expect(text(status)).toMatch(/is active; no deliveries yet/);
+
+    const tested: any = await client.callTool({ name: 'test_alert_subscription', arguments: { id, secret } });
+    expect(text(tested)).toMatch(/delivered \(HTTP 204\)/);
+    expect(delivered.at(-1).type).toBe('subscription.test');
+
+    const wrong: any = await client.callTool({ name: 'get_alert_subscription', arguments: { id, secret: 'nope' } });
+    expect(text(wrong)).toMatch(/^UNAUTHORIZED/);
+
+    const deleted: any = await client.callTool({ name: 'delete_alert_subscription', arguments: { id, secret } });
+    expect(text(deleted)).toMatch(/deleted/);
+    const gone: any = await client.callTool({ name: 'get_alert_subscription', arguments: { id, secret } });
+    expect(text(gone)).toMatch(/^NOT_FOUND/);
+  });
+
+  it('refuses unsafe webhook URLs', async () => {
+    const client = await connect();
+    const r: any = await client.callTool({
+      name: 'create_alert_subscription',
+      arguments: { place: 'Maipú', webhook_url: 'http://localhost:9000/hook' },
+    });
+    expect(r.isError).toBe(true);
+    expect(text(r)).toMatch(/^UNSAFE_WEBHOOK_URL/);
   });
 });

@@ -15,7 +15,18 @@ const bearing = z.number().min(0).max(360).openapi({ description: 'Grados desde 
 export const ErrorSchema = z
   .object({
     error: z.object({
-      code: z.enum(['INVALID_PARAMS', 'UNKNOWN_PLACE', 'OUT_OF_AREA', 'UPSTREAM_UNAVAILABLE', 'NOT_FOUND', 'INTERNAL']),
+      code: z.enum([
+        'INVALID_PARAMS',
+        'UNKNOWN_PLACE',
+        'OUT_OF_AREA',
+        'UPSTREAM_UNAVAILABLE',
+        'NOT_FOUND',
+        'UNAUTHORIZED',
+        'UNSAFE_WEBHOOK_URL',
+        'LIMIT_REACHED',
+        'RATE_LIMITED',
+        'INTERNAL',
+      ]),
       message: z.string(),
     }),
   })
@@ -289,3 +300,65 @@ export const PlacesResponse = z
   .openapi('Places');
 
 export const LocationResponse = z.object({ location: LocationSchema }).openapi('ResolvedLocation');
+
+// ---------- Suscripciones ----------
+
+const subscriptionEvents = z
+  .array(z.enum(['risk', 'alerts']))
+  .min(1)
+  .openapi({ description: '`risk`: el riesgo sube al nivel elegido (risk.raised) o vuelve a bajar (risk.cleared). `alerts`: alertas nuevas del SMN que cubren el lugar (alert.new).' });
+
+export const SubscriptionCreate = z
+  .object({
+    lat: z.number().min(-90).max(90).optional(),
+    lng: z.number().min(-180).max(180).optional(),
+    place: z.string().optional().openapi({ example: 'Godoy Cruz' }),
+    webhookUrl: z.string().max(2000).openapi({ example: 'https://example.com/hooks/alerta' }),
+    minLevel: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(2).openapi({ description: 'Nivel desde el que se avisa (1 amarillo, 2 naranja, 3 rojo)' }),
+    events: subscriptionEvents.default(['risk', 'alerts']),
+    label: z.string().max(80).optional(),
+  })
+  .openapi('SubscriptionCreate');
+
+export const SubscriptionUpdate = z
+  .object({
+    webhookUrl: z.string().max(2000).optional(),
+    minLevel: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+    events: subscriptionEvents.optional(),
+    label: z.string().max(80).nullable().optional(),
+    status: z.literal('active').optional().openapi({ description: 'Reactiva una suscripción desactivada por fallas' }),
+  })
+  .openapi('SubscriptionUpdate');
+
+export const SubscriptionView = z
+  .object({
+    id: z.string(),
+    createdAt: isoTime,
+    location: z.object({ lat: z.number(), lng: z.number(), label: z.string() }),
+    webhookUrl: z.string(),
+    minLevel: z.number(),
+    events: z.array(z.enum(['risk', 'alerts'])),
+    label: z.string().nullable(),
+    status: z.enum(['active', 'disabled']),
+    disabledReason: z.string().nullable(),
+    consecutiveFailures: z.number(),
+    lastDelivery: z
+      .object({ at: isoTime, type: z.string(), ok: z.boolean(), status: z.number().nullable(), error: z.string().optional() })
+      .nullable(),
+  })
+  .openapi('Subscription');
+
+export const SubscriptionCreated = SubscriptionView.extend({
+  secret: z.string().openapi({
+    description:
+      'Se muestra una sola vez. Sirve para verificar la firma de los webhooks (X-Alerta-Signature) y para administrar la suscripción (Authorization: Bearer <secret>).',
+  }),
+}).openapi('SubscriptionCreated');
+
+export const SubscriptionIdParam = z.object({
+  id: z.string().openapi({ param: { name: 'id', in: 'path' }, example: '3f2c…' }),
+});
+
+export const DeliveryResult = z
+  .object({ ok: z.boolean(), status: z.number().nullable(), error: z.string().optional() })
+  .openapi('DeliveryResult');
