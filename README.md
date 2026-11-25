@@ -159,6 +159,7 @@ packages/core/        @alerta/core, sin React Native: lo usan la app y el servid
                       tormentas, motor de riesgo, reglas de avisos
   test/               tests con imágenes de radar y archivos CAP reales como fixtures
 server/               @alerta/server: API HTTP con caché (ver server/README.md)
+mcp/                  @alerta/mcp: servidor MCP para agentes de IA (ver mcp/README.md)
 ```
 
 ## API propia
@@ -169,6 +170,13 @@ pronóstico en JSON estructurado. Detalles y endpoints en [server/README.md](ser
 
 ```bash
 npm run dev -w @alerta/server     # http://localhost:8787 (documentación en /docs)
+```
+
+Sobre la API corre un **servidor MCP** (puerto 8788) para que asistentes de IA consulten
+riesgo, alertas, tormentas y rayos: ver [mcp/README.md](mcp/README.md).
+
+```bash
+npm run dev -w @alerta/mcp        # http://127.0.0.1:8788/mcp (requiere la API corriendo)
 ```
 
 Para que la app lea las alertas del SMN desde la API (y no desde cada teléfono),

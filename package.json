@@ -45,6 +45,7 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "server"
+    "server",
+    "mcp"
   ]
 }

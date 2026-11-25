@@ -48,6 +48,7 @@ Weather-risk app for Mendoza (Argentina): hail, storms, lightning, wind/Zonda. U
 
 - Root = the Expo app (`src/`). Keep it at the root: `npx expo start` and EAS run from here.
 - `packages/core` (`@alerta/core`): all data parsing, storm tracking, the risk engine and notification rules. **No React Native imports** — it must run in Node (server, tests). App-specific wiring goes in `src/setup.ts` (storage, web proxy) and `src/sources.ts` (API vs direct).
+- `mcp` (`@alerta/mcp`): MCP server (Streamable HTTP on port 8788, plus stdio). It is a thin client of the REST API — never fetch upstream sources from here. Every tool result must keep the source terms (`USAGE_TERMS`).
 - `server` (`@alerta/server`): Hono API with OpenAPI generated from Zod schemas (`server/src/schemas.ts`). Response shapes are a public contract: change the schema, the serializer and the tests together.
 
 ### Verify every change

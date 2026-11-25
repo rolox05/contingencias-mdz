@@ -1,0 +1,24 @@
+{
+  "name": "@alerta/mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Servidor MCP de Alerta Mendoza: herramientas para que agentes consulten riesgo, alertas, tormentas y rayos.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/http.ts",
+    "stdio": "tsx src/stdio.ts",
+    "build": "esbuild src/http.ts src/stdio.ts --bundle --platform=node --target=node20 --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "start": "node dist/http.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  }
+}

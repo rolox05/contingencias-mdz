@@ -47,7 +47,7 @@ export const LightningQuery = LocationQuery.extend({
 
 // ---------- Piezas comunes ----------
 
-const LocationSchema = z
+export const LocationSchema = z
   .object({
     lat: z.number(),
     lng: z.number(),
@@ -287,3 +287,5 @@ export const HailZonesResponse = z
 export const PlacesResponse = z
   .object({ places: z.array(z.object({ name: z.string(), lat: z.number(), lng: z.number() })) })
   .openapi('Places');
+
+export const LocationResponse = z.object({ location: LocationSchema }).openapi('ResolvedLocation');

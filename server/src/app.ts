@@ -24,6 +24,7 @@ import {
   LightningQuery,
   LightningResponse,
   LocationQuery,
+  LocationResponse,
   PlacesResponse,
   RadarFramesResponse,
   RiskSchema,
@@ -347,6 +348,19 @@ export function createApp({ sources, cache, version = '1.0.0' }: AppOptions) {
         200,
       );
     },
+  );
+
+  // ---------- Ubicación ----------
+  app.openapi(
+    createRoute({
+      method: 'get',
+      path: '/v1/location',
+      tags: ['Referencia'],
+      summary: 'Valida una ubicación (lat/lng o place) y devuelve su nombre y si está en la cobertura del radar',
+      request: { query: LocationQuery },
+      responses: { ...json(LocationResponse, 'Ubicación resuelta'), ...errorResponses },
+    }),
+    (c) => c.json({ location: locationOut(resolveLocation(c.req.valid('query'))) }, 200),
   );
 
   // ---------- Localidades ----------
