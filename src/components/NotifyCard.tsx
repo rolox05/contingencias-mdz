@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useNotify } from '@/notify/NotifyProvider';
-import { LEVELS } from '@/risk/levels';
+import { LEVELS } from '@alerta/core';
 import { radius, space, useTheme } from '@/theme';
 
 import { Card } from './ui';

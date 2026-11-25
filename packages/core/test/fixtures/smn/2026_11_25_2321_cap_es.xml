@@ -1,0 +1,7 @@
+<?xml version = "1.0" encoding = "UTF-8"?>
+<cap:alert xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
+	<cap:identifier>urn:oid:2.49.0.1.32.0.2026.11.25.23.21.00</cap:identifier><cap:sender>smn@smn.gov.ar</cap:sender><cap:sent>2026-11-25T23:21:00-03:00</cap:sent><cap:status>Actual</cap:status><cap:msgType>Alert</cap:msgType><cap:scope>Public</cap:scope><cap:info>
+<cap:category>Met</cap:category><cap:event>TORMENTAS SEVERAS</cap:event><cap:urgency>Immediate</cap:urgency><cap:severity>Severe</cap:severity><cap:certainty>Observed</cap:certainty><cap:expires>2026-11-26T00:21:00-03:00</cap:expires><cap:headline>AVISO NARANJA POR TORMENTAS SEVERAS CON RAFAGAS Y OCASIONAL CAIDA DE GRANIZO</cap:headline><cap:description>TORMENTAS SEVERAS CON RAFAGAS Y OCASIONAL CAIDA DE GRANIZO</cap:description><cap:instruction>Permanecé en construcciones cerradas.</cap:instruction><cap:area><cap:areaDesc>MENDOZA: CAPITAL - GODOY CRUZ. </cap:areaDesc><cap:polygon>-32.80,-68.95 -32.80,-68.75 -33.00,-68.75 -33.00,-68.95 -32.80,-68.95</cap:polygon>
+	   </cap:area>
+	</cap:info>
+</cap:alert>

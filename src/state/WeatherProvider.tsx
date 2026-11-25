@@ -12,34 +12,39 @@ import {
 import { AppState } from 'react-native';
 
 import {
-  fetchDccForecast,
-  fetchHailZones,
-  fetchStations,
-  nearestStation,
-  type DccForecastDay,
-  type HailZone,
-  type Station,
-} from '@/data/dcc';
-import type { LatLng } from '@/data/geo';
-import { fetchStrikes, type Strike } from '@/data/lightning';
-import { DEFAULT_LOCALITY, describePlace, type Locality } from '@/data/localities';
-import { fetchPointForecast, type PointForecast } from '@/data/openmeteo';
-import type { RadarFrame } from '@/data/radar';
-import { fetchSmnAlerts, type SmnAlert } from '@/data/smn';
-import { overallMotion, type StormCell, type StormMotion } from '@/data/stormMotion';
-import { markSeen } from '@/notify/decide';
-import { savePlace } from '@/notify/notifier';
-import { loadMemory, saveMemory } from '@/notify/store';
-import {
   alertsForPlace,
   buildRisk,
+  type DccForecastDay,
+  DEFAULT_LOCALITY,
+  describePlace,
   EMPTY_RASTERS,
+  fetchDccForecast,
+  fetchHailZones,
+  fetchPointForecast,
+  fetchStations,
+  fetchStrikes,
+  type HailZone,
+  type LatLng,
   loadRadarSnapshot,
-  radarIsFresh,
+  type Locality,
+  markSeen,
+  nearestStation,
+  overallMotion,
   type Place,
+  type PointForecast,
+  type RadarFrame,
+  radarIsFresh,
   type Rasters,
-} from '@/risk/assess';
-import type { Risk } from '@/risk/engine';
+  type Risk,
+  type SmnAlert,
+  type Station,
+  type StormCell,
+  type StormMotion,
+  type Strike,
+} from '@alerta/core';
+import { savePlace } from '@/notify/notifier';
+import { appSources } from '@/sources';
+import { loadMemory, saveMemory } from '@/notify/store';
 
 export type { Place };
 
@@ -232,7 +237,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
       // Las alertas del SMN son muchos archivos: se cargan sin bloquear el resto.
       run('smn', force, async () => {
         try {
-          const result = await fetchSmnAlerts();
+          const result = await appSources.alerts();
           setAlerts(result.alerts);
           setAlertsPartial(!result.complete);
           // Si quedó incompleta se reintenta en el próximo ciclo, sin esperar los 5 minutos.

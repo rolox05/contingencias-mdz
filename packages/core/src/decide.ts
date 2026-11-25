@@ -1,11 +1,24 @@
-import type { SmnAlert } from '@/data/smn';
-import { formatDayTime } from '@/data/time';
-import type { Risk } from '@/risk/engine';
-import { ALERT_COLOR_NAME, LEVELS, type Level } from '@/risk/levels';
+import type { SmnAlert } from './smn';
+import { formatDayTime } from './time';
+import type { Risk } from './engine';
+import { ALERT_COLOR_NAME, LEVELS, type Level } from './levels';
 
-import type { NotifyMemory, NotifySettings } from './store';
 
 export type NotificationContent = { title: string; body: string };
+
+export type NotifySettings = {
+  enabled: boolean;
+  /** Nivel de riesgo desde el que se avisa: 1 = amarillo, 2 = naranja. */
+  minLevel: 1 | 2;
+};
+
+export type NotifyMemory = {
+  /** Último nivel informado (o visto con la app abierta). */
+  level: Level;
+  levelAt: number;
+  /** Alertas del SMN ya informadas, para no repetirlas. */
+  alertIds: string[];
+};
 
 const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 

@@ -2,10 +2,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatKm } from '@/data/geo';
-import { alertDistanceKm, alertLocalities, type AlertKind, type SmnAlert } from '@/data/smn';
-import { formatDayTime } from '@/data/time';
-import { ALERT_COLOR_NAME, LEVELS } from '@/risk/levels';
+import {
+  ALERT_COLOR_NAME,
+  alertDistanceKm,
+  type AlertKind,
+  alertLocalities,
+  formatDayTime,
+  formatKm,
+  LEVELS,
+  type SmnAlert,
+} from '@alerta/core';
 import { useWeather } from '@/state/WeatherProvider';
 import { radius, space, useTheme } from '@/theme';
 

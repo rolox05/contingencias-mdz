@@ -136,23 +136,43 @@ Antes de publicar en las tiendas, cambiá los identificadores `ios.bundleIdentif
 ## Comandos útiles
 
 ```bash
-npx tsc --noEmit     # tipos
-npx expo lint        # lint
-npx expo-doctor      # diagnóstico del proyecto
+npm run check        # tipos (app, núcleo y servidor) + lint + tests: correrlo antes de cada cambio
+npm test             # solo tests (Vitest)
+npx expo-doctor      # diagnóstico del proyecto Expo
 ```
 
 ## Estructura
 
+Es un monorepo con npm workspaces. La app Expo está en la raíz (así `npx expo start`
+y EAS funcionan igual que siempre) y comparte la lógica con el servidor:
+
 ```
-src/
-  app/            pantallas (Expo Router): (tabs)/index, mapa, alertas
-  app/proxy+api.ts  proxy para la versión web (las apps nativas no lo usan)
-  components/     tarjetas, selector de ubicación y mapa (Leaflet en un WebView)
-  data/           una fuente por archivo: radar, rayos, smn, dcc, openmeteo
-  notify/         avisos: reglas (decide), revisión en segundo plano (notifier) y ajustes
-  risk/           motor de riesgo, niveles y cálculo sin pantalla (assess)
-  state/          WeatherProvider: ubicación, actualización y datos compartidos
+src/                  app (Expo Router)
+  app/                pantallas: (tabs)/index, mapa, alertas; proxy+api.ts (solo versión web)
+  components/         tarjetas, selector de ubicación y mapa (Leaflet en un WebView)
+  notify/             avisos en el teléfono: revisión en segundo plano y ajustes
+  state/              WeatherProvider: ubicación, actualización y datos compartidos
+  setup.ts            configura el núcleo para la app (almacenamiento, proxy web)
+  sources.ts          de dónde lee la app (API propia si EXPO_PUBLIC_API_URL está definida)
+packages/core/        @alerta/core, sin React Native: lo usan la app y el servidor
+  src/                fuentes (radar, rayos, smn, dcc, openmeteo), seguimiento de
+                      tormentas, motor de riesgo, reglas de avisos
+  test/               tests con imágenes de radar y archivos CAP reales como fixtures
+server/               @alerta/server: API HTTP con caché (ver server/README.md)
 ```
+
+## API propia
+
+`server/` es una API (Hono + OpenAPI) que consulta las fuentes oficiales una vez por
+período para todos los clientes y expone el riesgo, alertas, tormentas, rayos y
+pronóstico en JSON estructurado. Detalles y endpoints en [server/README.md](server/README.md).
+
+```bash
+npm run dev -w @alerta/server     # http://localhost:8787 (documentación en /docs)
+```
+
+Para que la app lea las alertas del SMN desde la API (y no desde cada teléfono),
+copiá `.env.example` como `.env.local` y completá `EXPO_PUBLIC_API_URL`.
 
 ## Limitaciones conocidas
 

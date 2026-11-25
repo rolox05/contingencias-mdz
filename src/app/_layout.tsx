@@ -1,4 +1,5 @@
-// Define la revisión en segundo plano antes de montar cualquier pantalla.
+// Configura el núcleo y define la revisión en segundo plano antes de montar cualquier pantalla.
+import '@/setup';
 import '@/notify/notifier';
 
 import { Stack } from 'expo-router';

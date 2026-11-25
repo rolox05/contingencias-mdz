@@ -1,3 +1,4 @@
+/// <reference path="./types/upng-js.d.ts" />
 import UPNG from 'upng-js';
 
 import { fetchBuffer, fetchJson, fresh } from './http';

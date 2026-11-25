@@ -1,0 +1,15 @@
+{
+  "name": "@alerta/core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lectura de fuentes oficiales, seguimiento de tormentas y motor de riesgo de Alerta Mendoza.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "upng-js": "^2.1.0"
+  },
+  "type": "module"
+}

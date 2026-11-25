@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { LEVELS, type Level } from '@/risk/levels';
+import { LEVELS, type Level } from '@alerta/core';
 import { radius, space, useTheme } from '@/theme';
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {

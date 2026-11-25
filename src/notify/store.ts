@@ -1,23 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { Place } from '@/risk/assess';
-import type { Level } from '@/risk/levels';
+import type { NotifyMemory, NotifySettings, Place } from '@alerta/core';
 
 /** Datos que comparten la app abierta y la revisión en segundo plano. */
 
-export type NotifySettings = {
-  enabled: boolean;
-  /** Nivel de riesgo desde el que se avisa: 1 = amarillo, 2 = naranja. */
-  minLevel: 1 | 2;
-};
-
-export type NotifyMemory = {
-  /** Último nivel informado (o visto con la app abierta). */
-  level: Level;
-  levelAt: number;
-  /** Alertas del SMN ya informadas, para no repetirlas. */
-  alertIds: string[];
-};
+export type { NotifyMemory, NotifySettings };
 
 export const DEFAULT_SETTINGS: NotifySettings = { enabled: false, minLevel: 2 };
 const EMPTY_MEMORY: NotifyMemory = { level: 0, levelAt: 0, alertIds: [] };

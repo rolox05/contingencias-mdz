@@ -5,9 +5,11 @@ import { AndroidImportance } from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
-import { assessPlace } from '@/risk/assess';
+import '@/setup';
+import { assessPlace, decide, type NotificationContent } from '@alerta/core';
 
-import { decide, type NotificationContent } from './decide';
+import { appSources } from '@/sources';
+
 import { loadMemory, loadPlace, loadSettings, saveMemory, savePlace } from './store';
 
 /**
@@ -99,7 +101,7 @@ export async function runCheck(): Promise<void> {
   const place = await loadPlace();
   if (!place) return;
 
-  const { risk, myAlerts, now } = await assessPlace(place);
+  const { risk, myAlerts, now } = await assessPlace(place, appSources);
   const memory = await loadMemory();
   const result = decide({ risk, myAlerts, placeLabel: place.label, settings, memory, now });
   for (const n of result.notifications) await showNotification(n);

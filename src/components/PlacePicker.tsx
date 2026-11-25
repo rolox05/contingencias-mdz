@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LOCALITIES } from '@/data/localities';
+import { LOCALITIES } from '@alerta/core';
 import { useWeather } from '@/state/WeatherProvider';
 import { radius, space, useTheme } from '@/theme';
 

@@ -1,6 +1,4 @@
 import { distanceKm, pointInPolygon, type LatLng, type Polygon } from './geo';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { fetchText, fresh, HttpError, mapLimit } from './http';
 import { LOCALITIES, MENDOZA_BOX } from './localities';
 
@@ -134,15 +132,29 @@ function parseCap(xml: string, url: string): SmnAlert | null {
 }
 
 // Cada archivo CAP es inmutable (su nombre incluye la fecha de emisión), así que
-// se guarda en el teléfono y nunca se vuelve a pedir.
+// se guarda y nunca se vuelve a pedir. El almacenamiento es configurable: la app
+// usa el del teléfono; el servidor, memoria.
+export type KeyValueStore = {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+};
+
 const STORAGE_KEY = 'smn-cap-cache-v1';
+let store: KeyValueStore | null = null;
 let capCache: Map<string, SmnAlert | null> | null = null;
+
+/** Cambia dónde se guardan los archivos ya descargados y reinicia el estado interno. */
+export function configureSmnStore(next: KeyValueStore | null): void {
+  store = next;
+  capCache = null;
+  blockedUntil = 0;
+}
 
 async function loadCache(): Promise<Map<string, SmnAlert | null>> {
   if (capCache) return capCache;
   capCache = new Map();
   try {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    const stored = store ? await store.getItem(STORAGE_KEY) : null;
     if (stored) capCache = new Map(JSON.parse(stored) as [string, SmnAlert | null][]);
   } catch {
     // Sin caché guardada: se descarga todo de nuevo.
@@ -151,11 +163,12 @@ async function loadCache(): Promise<Map<string, SmnAlert | null>> {
 }
 
 function saveCache(cache: Map<string, SmnAlert | null>) {
+  if (!store) return;
   // Solo interesan los avisos que tocan Mendoza; del resto alcanza con saber que ya se vieron.
   const entries = [...cache.entries()].map(
     ([url, alert]) => [url, alert && touchesMendoza(alert.polygons) ? alert : null] as const,
   );
-  AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries)).catch(() => {});
+  store.setItem(STORAGE_KEY, JSON.stringify(entries)).catch(() => {});
 }
 
 /**

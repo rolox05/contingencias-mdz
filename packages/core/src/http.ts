@@ -1,19 +1,31 @@
-import { Platform } from 'react-native';
-
 /**
- * Hosts oficiales que no envían cabeceras CORS. En las apps nativas se consultan
- * directo; en la versión web pasan por la ruta /proxy (ver src/app/proxy+api.ts).
+ * Acceso HTTP configurable. La app y el servidor comparten este módulo:
+ * - la versión web de la app redirige los hosts sin CORS a su proxy (`resolveUrl`);
+ * - el servidor se identifica con un User-Agent propio.
  */
-export const PROXIED_HOSTS = [
+export type HttpConfig = {
+  /** Reescribe la URL antes de pedirla (por ejemplo, para pasar por un proxy). */
+  resolveUrl?: (url: string) => string;
+  /** Cabeceras extra en cada pedido. */
+  headers?: Record<string, string>;
+  fetch?: typeof fetch;
+};
+
+let config: HttpConfig = {};
+
+export function configureHttp(next: HttpConfig): void {
+  config = { ...config, ...next };
+}
+
+/** Hosts oficiales que no envían cabeceras CORS (no se pueden leer desde un navegador). */
+export const NO_CORS_HOSTS = [
   'www2.contingencias.mendoza.gov.ar',
   'agrometeo.mendoza.gov.ar',
   'ssl.smn.gob.ar',
 ];
 
 export function resolveUrl(url: string): string {
-  if (Platform.OS !== 'web') return url;
-  const host = url.replace(/^https?:\/\//, '').split('/')[0];
-  return PROXIED_HOSTS.includes(host) ? `/proxy?url=${encodeURIComponent(url)}` : url;
+  return config.resolveUrl ? config.resolveUrl(url) : url;
 }
 
 /** Agrega un parámetro que cambia cada `seconds` para evitar respuestas cacheadas. */
@@ -32,7 +44,8 @@ async function request(url: string, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(resolveUrl(url), { signal: controller.signal });
+    const doFetch = config.fetch ?? fetch;
+    const res = await doFetch(resolveUrl(url), { signal: controller.signal, headers: config.headers });
     if (!res.ok) throw new HttpError(res.status);
     return res;
   } finally {

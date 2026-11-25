@@ -1,4 +1,4 @@
-import { RADAR_BOUNDS } from '@/data/radarMath';
+import { RADAR_BOUNDS } from '@alerta/core';
 
 /**
  * Página del mapa (Leaflet). En Android/iOS corre dentro de un WebView y en la

@@ -1,10 +1,10 @@
-import { compass, formatKm } from '../data/geo';
-import type { LightningSummary } from '../data/lightning';
-import { isHailCode, isThunder, type PointForecast } from '../data/openmeteo';
-import { describeDbz, hailRangeLabel, type NearestEcho, type RasterScan } from '../data/radarMath';
-import type { SmnAlert } from '../data/smn';
-import type { StormThreat } from '../data/stormMotion';
-import { formatDayTime } from '../data/time';
+import { compass, formatKm } from './geo';
+import type { LightningSummary } from './lightning';
+import { isHailCode, isThunder, type PointForecast } from './openmeteo';
+import { describeDbz, hailRangeLabel, type NearestEcho, type RasterScan } from './radarMath';
+import type { SmnAlert } from './smn';
+import type { StormThreat } from './stormMotion';
+import { formatDayTime } from './time';
 import { ALERT_COLOR_NAME, maxLevel, type Level } from './levels';
 
 export type HazardKey = 'hail' | 'rain' | 'lightning' | 'wind';

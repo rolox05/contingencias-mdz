@@ -1,4 +1,4 @@
-import type { NotificationContent } from './decide';
+import type { NotificationContent } from '@alerta/core';
 import { savePlace } from './store';
 
 /** La versión web (solo para desarrollo) no tiene avisos del sistema. */

@@ -15,9 +15,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertCard } from '@/components/AlertCard';
 import { NotifyCard } from '@/components/NotifyCard';
 import { Card, LevelPill, SectionTitle } from '@/components/ui';
-import type { HailZone } from '@/data/dcc';
-import { alertCovers, groupAlerts } from '@/data/smn';
-import { formatDateLabel, formatTime, utcClockToLocal } from '@/data/time';
+import {
+  alertCovers,
+  formatDateLabel,
+  formatTime,
+  groupAlerts,
+  type HailZone,
+  utcClockToLocal,
+} from '@alerta/core';
 import { useWeather, type SourceKey } from '@/state/WeatherProvider';
 import { radius, space, useTheme } from '@/theme';
 

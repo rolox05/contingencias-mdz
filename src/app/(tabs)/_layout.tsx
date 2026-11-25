@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { LEVELS } from '@/risk/levels';
+import { LEVELS } from '@alerta/core';
 import { useWeather } from '@/state/WeatherProvider';
 import { useTheme } from '@/theme';
 

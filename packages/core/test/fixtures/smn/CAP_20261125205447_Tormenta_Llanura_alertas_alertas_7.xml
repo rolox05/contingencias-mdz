@@ -1,0 +1,2 @@
+<?xml version="1.0"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2"><identifier>urn:oid:7</identifier><sent>2026-11-25T20:48:50-03:00</sent><info><event>Tormentas</event><severity>Moderate</severity><onset>2026-11-25T21:00:00-03:00</onset><expires>2026-11-26T02:59:59-03:00</expires><description>Tormentas.</description><area><polygon>-34.5,-58.6 -34.5,-58.3 -34.8,-58.3 -34.8,-58.6 -34.5,-58.6</polygon></area></info></alert>
