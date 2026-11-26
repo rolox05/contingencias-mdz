@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertCard } from '@/components/AlertCard';
 import { PlaceButton } from '@/components/PlacePicker';
+import { HazardListSkeleton, HoursSkeleton, NowSkeleton, RiskHeroSkeleton } from '@/components/Skeleton';
 import { Card, LevelPill, SectionTitle } from '@/components/ui';
 import {
   compassShort,
@@ -68,6 +69,9 @@ export default function RiskScreen() {
   }, []);
   const showNotifyBanner =
     notify.supported && notify.loaded && !notify.settings.enabled && !bannerHidden && !w.loading;
+  /** Primera carga o cambio de ubicación: se muestran esqueletos en lugar de datos viejos o incompletos. */
+  const showSkeleton = w.loading || w.placeChanging;
+  const skeletonLabel = w.loading ? 'Consultando radar, rayos y alertas' : `Cargando los datos de ${place.label}`;
 
   return (
     <ScrollView
@@ -83,9 +87,16 @@ export default function RiskScreen() {
     >
       <View style={styles.header}>
         <PlaceButton />
-        <Text style={[styles.updated, { color: t.muted }]}>
-          {w.updatedAt ? `Actualizado ${formatTime(w.updatedAt)}` : 'Cargando…'}
-        </Text>
+        {showSkeleton ? (
+          <View style={styles.updating} accessibilityLiveRegion="polite">
+            <ActivityIndicator size="small" color={t.accent} />
+            <Text style={[styles.updated, { color: t.muted }]}>Actualizando…</Text>
+          </View>
+        ) : (
+          <Text style={[styles.updated, { color: t.muted }]}>
+            {w.updatedAt ? `Actualizado ${formatTime(w.updatedAt)}` : 'Cargando…'}
+          </Text>
+        )}
       </View>
 
       {place.source === 'default' && !w.locating ? (
@@ -98,11 +109,8 @@ export default function RiskScreen() {
       ) : null}
 
       {/* Riesgo general */}
-      {w.loading ? (
-        <Card style={styles.loading}>
-          <ActivityIndicator color={t.accent} />
-          <Text style={{ color: t.muted, fontSize: 15 }}>Consultando radar, rayos y alertas…</Text>
-        </Card>
+      {showSkeleton ? (
+        <RiskHeroSkeleton label={skeletonLabel} />
       ) : (
         <View
           style={[styles.hero, { backgroundColor: meta.color }]}
@@ -128,7 +136,7 @@ export default function RiskScreen() {
         </View>
       )}
 
-      {!w.loading
+      {!showSkeleton
         ? risk.notes.map((note) => (
             <View key={note} style={[styles.banner, { backgroundColor: t.surfaceAlt }]}>
               <MaterialCommunityIcons name="information-outline" size={18} color={t.muted} />
@@ -169,7 +177,12 @@ export default function RiskScreen() {
       ) : null}
 
       {/* Detalle por fenómeno */}
-      {!w.loading ? (
+      {showSkeleton ? (
+        <>
+          <SectionTitle>Qué pasa cerca tuyo</SectionTitle>
+          <HazardListSkeleton />
+        </>
+      ) : (
         <>
           <SectionTitle>Qué pasa cerca tuyo</SectionTitle>
           <View style={{ gap: space.sm }}>
@@ -189,7 +202,7 @@ export default function RiskScreen() {
             <Text style={[styles.mapButtonText, { color: t.accent }]}>Ver el radar en el mapa</Text>
           </Pressable>
         </>
-      ) : null}
+      )}
 
       {/* Alertas oficiales para el punto */}
       <SectionTitle hint="Servicio Meteorológico Nacional">Alertas en tu ubicación</SectionTitle>
@@ -218,7 +231,7 @@ export default function RiskScreen() {
       )}
 
       {/* Condiciones actuales */}
-      {w.forecast ? (
+      {w.forecast && !w.placeChanging ? (
         <>
           <SectionTitle>Ahora</SectionTitle>
           <Card>
@@ -278,11 +291,13 @@ export default function RiskScreen() {
             Probabilidad de lluvia y ráfagas máximas por hora. {OPEN_METEO_CREDIT}.
           </Text>
         </>
-      ) : w.forecastLoading ? (
-        <Card style={styles.inline}>
-          <ActivityIndicator color={t.accent} size="small" />
-          <Text style={{ color: t.muted, fontSize: 14, flex: 1 }}>Cargando el pronóstico para {place.label}…</Text>
-        </Card>
+      ) : showSkeleton || w.forecastLoading ? (
+        <>
+          <SectionTitle>Ahora</SectionTitle>
+          <NowSkeleton />
+          <SectionTitle hint={place.label}>Próximas horas</SectionTitle>
+          <HoursSkeleton />
+        </>
       ) : null}
 
       {today ? (
@@ -345,6 +360,7 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
   },
   updated: { fontSize: 12 },
+  updating: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   banner: {
     flexDirection: 'row',
     gap: space.sm,
@@ -354,7 +370,6 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
   },
   bannerText: { flex: 1, fontSize: 13, lineHeight: 18 },
-  loading: { alignItems: 'center', gap: space.md, paddingVertical: space.xl * 1.5 },
   hero: { borderRadius: radius.lg, padding: space.lg, gap: space.sm, marginBottom: space.md },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   heroLevel: { fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },

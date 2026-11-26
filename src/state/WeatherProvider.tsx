@@ -83,6 +83,11 @@ type WeatherState = {
   /** Pronóstico del lugar elegido (null mientras se carga o si falló). */
   forecast: PointForecast | null;
   forecastLoading: boolean;
+  /**
+   * Se está cambiando de lugar: buscando la ubicación pedida por el usuario o cargando
+   * el pronóstico del nuevo punto. La pantalla muestra esqueletos de carga.
+   */
+  placeChanging: boolean;
   dccForecast: DccForecastDay[];
   station: { station: Station; km: number } | null;
   hailZones: HailZone[];
@@ -147,6 +152,8 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     source: 'default',
   });
   const [locating, setLocating] = useState(true);
+  /** El usuario pidió usar su ubicación y se está buscando (no cuenta el intento al abrir). */
+  const [relocating, setRelocating] = useState(false);
   const [locationUnavailable, setLocationUnavailable] = useState(false);
 
   const [frames, setFrames] = useState<RadarFrame[]>([]);
@@ -185,6 +192,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     if (point) setPlace({ ...point, label: describePlace(point), source: 'gps' });
     setLocationUnavailable(!point);
     setLocating(false);
+    setRelocating(false);
   }, []);
 
   const choosePlace = useCallback((locality: Locality) => {
@@ -193,6 +201,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
 
   const locateMe = useCallback(() => {
     setLocating(true);
+    setRelocating(true);
     findPosition().then(applyPosition);
   }, [applyPosition]);
 
@@ -324,6 +333,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   // ---------- Derivados ----------
   const forecast = forecastFor(forecasts, place);
   const forecastLoading = forecast === null && !forecastFailed[pointKey(place)];
+  const placeChanging = relocating || forecastLoading;
 
   const radarFresh = radarIsFresh(frames, now);
 
@@ -368,6 +378,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
       alertsPartial,
       forecast,
       forecastLoading,
+      placeChanging,
       dccForecast,
       station,
       hailZones,
@@ -381,7 +392,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     [
       place, now, locating, locationUnavailable, locateMe, choosePlace, frames, radarFresh, rasters.cells,
       stormDrift, strikes,
-      alerts, myAlerts, alertsLoaded, alertsPartial, forecast, forecastLoading, dccForecast, station, hailZones, risk, sources,
+      alerts, myAlerts, alertsLoaded, alertsPartial, forecast, forecastLoading, placeChanging, dccForecast, station, hailZones, risk, sources,
       loading, refreshing, updatedAt, refreshNow,
     ],
   );
