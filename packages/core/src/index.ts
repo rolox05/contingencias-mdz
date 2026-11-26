@@ -9,6 +9,7 @@ export * from './assess';
 export * from './dcc';
 export * from './decide';
 export * from './engine';
+export * from './forecastCache';
 export * from './geo';
 export * from './http';
 export * from './levels';

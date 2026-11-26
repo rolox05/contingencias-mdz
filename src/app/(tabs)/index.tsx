@@ -251,7 +251,7 @@ export default function RiskScreen() {
             ) : null}
           </Card>
 
-          <SectionTitle hint="Pronóstico para tu punto">Próximas horas</SectionTitle>
+          <SectionTitle hint={place.label}>Próximas horas</SectionTitle>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -278,6 +278,11 @@ export default function RiskScreen() {
             Probabilidad de lluvia y ráfagas máximas por hora. {OPEN_METEO_CREDIT}.
           </Text>
         </>
+      ) : w.forecastLoading ? (
+        <Card style={styles.inline}>
+          <ActivityIndicator color={t.accent} size="small" />
+          <Text style={{ color: t.muted, fontSize: 14, flex: 1 }}>Cargando el pronóstico para {place.label}…</Text>
+        </Card>
       ) : null}
 
       {today ? (

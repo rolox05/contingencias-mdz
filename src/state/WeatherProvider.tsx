@@ -21,6 +21,9 @@ import {
   fetchDccForecast,
   fetchHailZones,
   fetchPointForecast,
+  forecastFor,
+  forecastIsStale,
+  type ForecastCache,
   fetchStations,
   fetchStrikes,
   type HailZone,
@@ -30,6 +33,7 @@ import {
   markSeen,
   nearestStation,
   overallMotion,
+  pointKey,
   type Place,
   type PointForecast,
   type RadarFrame,
@@ -39,6 +43,7 @@ import {
   type SmnAlert,
   type Station,
   type StormCell,
+  storeForecast,
   type StormMotion,
   type Strike,
 } from '@alerta/core';
@@ -75,7 +80,9 @@ type WeatherState = {
   alertsLoaded: boolean;
   /** Faltó descargar parte de las alertas: la lista puede estar incompleta. */
   alertsPartial: boolean;
+  /** Pronóstico del lugar elegido (null mientras se carga o si falló). */
   forecast: PointForecast | null;
+  forecastLoading: boolean;
   dccForecast: DccForecastDay[];
   station: { station: Station; km: number } | null;
   hailZones: HailZone[];
@@ -98,6 +105,8 @@ export function useWeather(): WeatherState {
 }
 
 const AUTO_REFRESH_MS = 2 * 60_000;
+
+type ForecastResult = { key: string; data: PointForecast | null };
 
 /** Cada cuánto vuelve a consultarse cada fuente, como mínimo. */
 const MIN_INTERVAL: Record<SourceKey, number> = {
@@ -146,7 +155,10 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const [alerts, setAlerts] = useState<SmnAlert[]>([]);
   const [alertsLoaded, setAlertsLoaded] = useState(false);
   const [alertsPartial, setAlertsPartial] = useState(false);
-  const [forecast, setForecast] = useState<PointForecast | null>(null);
+  /** Pronósticos por lugar: nunca se muestra el de otro punto. */
+  const [forecasts, setForecasts] = useState<ForecastCache<PointForecast>>({});
+  /** Lugares cuyo último pedido de pronóstico falló. */
+  const [forecastFailed, setForecastFailed] = useState<Record<string, boolean>>({});
   const [dccForecast, setDccForecast] = useState<DccForecastDay[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [hailZones, setHailZones] = useState<HailZone[]>([]);
@@ -162,6 +174,11 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   }, [place]);
   const lastRun = useRef<Partial<Record<SourceKey, number>>>({});
   const busy = useRef(false);
+  const forecastsRef = useRef(forecasts);
+  useEffect(() => {
+    forecastsRef.current = forecasts;
+  }, [forecasts]);
+  const forecastInFlight = useRef(new Set<string>());
 
   // ---------- Ubicación ----------
   const applyPosition = useCallback((point: LatLng | null) => {
@@ -206,6 +223,36 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  /**
+   * Pide el pronóstico de un punto si falta o tiene más de 10 minutos (o siempre, con
+   * `force`). Devuelve el resultado sin tocar el estado; `applyForecast` lo guarda.
+   */
+  const requestForecast = useCallback(async (point: LatLng, force: boolean): Promise<ForecastResult | null> => {
+    const key = pointKey(point);
+    if (forecastInFlight.current.has(key)) return null;
+    if (!force && !forecastIsStale(forecastsRef.current, point, Date.now(), MIN_INTERVAL.forecast)) return null;
+    forecastInFlight.current.add(key);
+    try {
+      return { key, data: await fetchPointForecast(point) };
+    } catch {
+      return { key, data: null };
+    } finally {
+      forecastInFlight.current.delete(key);
+    }
+  }, []);
+
+  /**
+   * Guarda el resultado asociado a su punto: una consulta vieja que termina tarde no
+   * pisa el pronóstico del lugar actual.
+   */
+  const applyForecast = useCallback((result: ForecastResult | null) => {
+    if (!result) return;
+    const { key, data } = result;
+    if (data) setForecasts((prev) => storeForecast(prev, key, data, Date.now()));
+    setForecastFailed((prev) => ({ ...prev, [key]: !data }));
+    setSources((prev) => ({ ...prev, forecast: { ok: !!data, at: Date.now() } }));
+  }, []);
+
   const loadRadar = useCallback(async () => {
     const snapshot = await loadRadarSnapshot();
     setFrames(snapshot.frames);
@@ -218,12 +265,11 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     async (force = true) => {
       if (busy.current) return;
       busy.current = true;
-      const point = placeRef.current;
       try {
         await Promise.all([
           run('radar', force, loadRadar),
           run('lightning', force, async () => setStrikes(await fetchStrikes())),
-          run('forecast', force, async () => setForecast(await fetchPointForecast(point))),
+          requestForecast(placeRef.current, force).then(applyForecast),
           run('stations', force, async () => setStations(await fetchStations())),
           run('dcc', force, async () => setDccForecast(await fetchDccForecast())),
         ]);
@@ -247,7 +293,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         }
       });
     },
-    [loadRadar, run],
+    [applyForecast, loadRadar, requestForecast, run],
   );
 
   useEffect(() => {
@@ -269,33 +315,16 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     await refresh(true);
   }, [refresh]);
 
-  // El pronóstico depende del punto: se vuelve a pedir al cambiar de lugar.
-  const firstPlace = useRef(true);
+  // Al cambiar de lugar, el pronóstico del nuevo punto se pide en el momento
+  // (o se usa el guardado si tiene menos de 10 minutos).
   useEffect(() => {
-    if (firstPlace.current) {
-      firstPlace.current = false; // la primera carga ya la hace refresh()
-      return;
-    }
-    let cancelled = false;
-    lastRun.current.forecast = Date.now();
-    fetchPointForecast(place).then(
-      (f) => {
-        if (cancelled) return;
-        setForecast(f);
-        setSources((prev) => ({ ...prev, forecast: { ok: true, at: Date.now() } }));
-      },
-      () => {
-        if (cancelled) return;
-        setSources((prev) => ({ ...prev, forecast: { ok: false, at: Date.now() } }));
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [place.lat, place.lng]);
+    requestForecast({ lat: place.lat, lng: place.lng }, false).then(applyForecast);
+  }, [applyForecast, requestForecast, place.lat, place.lng]);
 
   // ---------- Derivados ----------
+  const forecast = forecastFor(forecasts, place);
+  const forecastLoading = forecast === null && !forecastFailed[pointKey(place)];
+
   const radarFresh = radarIsFresh(frames, now);
 
   const myAlerts = useMemo(() => alertsForPlace(alerts, place, now), [alerts, place, now]);
@@ -338,6 +367,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
       alertsLoaded,
       alertsPartial,
       forecast,
+      forecastLoading,
       dccForecast,
       station,
       hailZones,
@@ -351,7 +381,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     [
       place, now, locating, locationUnavailable, locateMe, choosePlace, frames, radarFresh, rasters.cells,
       stormDrift, strikes,
-      alerts, myAlerts, alertsLoaded, alertsPartial, forecast, dccForecast, station, hailZones, risk, sources,
+      alerts, myAlerts, alertsLoaded, alertsPartial, forecast, forecastLoading, dccForecast, station, hailZones, risk, sources,
       loading, refreshing, updatedAt, refreshNow,
     ],
   );
